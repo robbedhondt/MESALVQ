@@ -1,0 +1,3 @@
+[submodule "mesaLVQ/survivallvq"]
+	path = mesaLVQ/survivallvq
+	url = https://gitlab.kuleuven.be/u0125808/survivallvq
