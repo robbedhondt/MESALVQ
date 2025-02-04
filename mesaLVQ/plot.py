@@ -134,9 +134,7 @@ def plot_relevance_matrix(slvq, names=None):
     rel_mat = slvq.lambda_mat().detach().numpy()
     assert rel_mat.shape[0] == rel_mat.shape[1]
     if names is None:
-        names = list(range(rel_mat.shape[0]))
-    else:
-        names = np.array([FEATURE_NAME_MAPPING[name] for name in names])
+        names = np.array(range(rel_mat.shape[0]))
     assert len(names) == rel_mat.shape[0]
     fig = plt.matshow(rel_mat)
     cbar = plt.colorbar(fig)
@@ -148,8 +146,6 @@ def plot_feature_relevances(slvq, names=None, sort=True):
     rel_mat = slvq.lambda_mat().detach().numpy()
     if names is None:
         names = np.array(range(rel_mat.shape[0]))
-    else:
-        names = np.array([FEATURE_NAME_MAPPING[name] for name in names])
     isort = np.argsort(np.diag(rel_mat))
     plt.figure(figsize=(5, len(names) / 6))
     plt.barh(names[isort], np.diag(rel_mat)[isort], fc="k")
@@ -158,18 +154,18 @@ def plot_feature_relevances(slvq, names=None, sort=True):
     plt.grid(axis="x")
     plt.tight_layout()
 
-def plot_feature_relevances_local(models, names=None):
+def plot_feature_relevances_local(models, names=None, event_names=None):
     if names is None:
         names = np.array(range(models[0].n_features))
-    else:
-        names = np.array([FEATURE_NAME_MAPPING[name] for name in names])
+    if event_names is None:
+        event_names = [f"event {j+1}" for j in range(len(model))]
     fig, ax = plt.subplots(ncols=len(models), figsize=(1.25*len(models), 6), sharey=True, sharex=True)
     relevances = np.stack([np.diag(model.lambda_mat().detach().numpy()) for model in models], axis=1)
     isort = np.argsort(relevances.max(axis=1))
     for j,model in enumerate(models):
         ax[j].barh(names[isort], relevances[isort,j], fc="k")
         ax[j].grid()
-        ax[j].set_title(TARGET_NAME_MAPPING[EVENT_NAMES[j]])
+        ax[j].set_title(event_names[j])
         ax[j].invert_yaxis()
     plt.subplots_adjust(wspace=0)
     ax[0].set_ylabel('Feature')
@@ -177,7 +173,7 @@ def plot_feature_relevances_local(models, names=None):
     plt.tight_layout()
 
 def plot_kaplan_meier_separate(slvq, X, y_true):
-    y_pred = predict(mtslvq, X, closest=True)
+    y_pred = slvq.predict(X, closest=True)
 
     for i in range(slvq.n_events):
         plt.figure(figsize=(5,5))
@@ -224,12 +220,12 @@ def plot_kaplan_meier_together_local(slvq, X, y_true):
     plt.ylabel("Probability of remaining stable")
     plt.tight_layout()
 
-def plot_kaplan_meier_alt(X, y_true, y_pred):
+def plot_kaplan_meier_alt(X, y_true, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(8.5, 3.75))):
     # If just 1 global clustering is given, repeat it based on the number of targets
     if len(y_true.shape) != len(y_pred.shape):
         y_pred = np.array([y_pred]*y_true.shape[1]).T
     # figsize=(9,5) is the "unsqueezed" version
-    fig, ax = plt.subplots(nrows=2, ncols=4, figsize=(8.5,3.75), sharex=True, sharey=True)
+    fig, ax = plt.subplots(**subplots_params, sharex=True, sharey=True)
     ax = ax.flatten()
     for j in range(y_pred.shape[1]):
         for c in range(len(np.unique(y_pred[:,j]))):

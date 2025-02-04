@@ -3,7 +3,7 @@ import torch
 from sklearn.base import BaseEstimator
 from sksurv.util import Surv
 from sksurv.metrics import concordance_index_censored, concordance_index_ipcw, integrated_brier_score, cumulative_dynamic_auc
-import sys; sys.path.append("/mnt/c/Users/u0131222/PhD/Projects/survivallvq")
+import sys; sys.path.append("survivallvq")
 from Models.SurvivalLVQ import SurvivalLVQ
 
 class MultiEventSurvivalLVQ(torch.nn.Module, BaseEstimator):
@@ -134,6 +134,8 @@ class LocalMultiEventSurvivalLVQ(BaseEstimator):
             self.models[i] = SurvivalLVQ(**hyperparameters[i])
 
     def fit(self, X, y):
+        self.n_events   = y.shape[1]
+        self.n_features = X.shape[1]
         for i in range(y.shape[1]):
             self.models[i].fit(X, y[:,i])
     
@@ -161,7 +163,9 @@ class LocalMultiEventSurvivalLVQ(BaseEstimator):
     def __len__(self):
         return len(self.models)
 
-def compute_metric(name, y_train, y_test, y_test_pred, y_test_pred_survfunc):
+
+
+def compute_metric(name, y_train, y_test, y_test_pred, y_test_pred_survfunc, times=np.linspace(30, 1150, 100)):
     # Make the code work also for single-event
     y_train              = np.atleast_2d(y_train             )
     y_test               = np.atleast_2d(y_test              )
@@ -176,8 +180,7 @@ def compute_metric(name, y_train, y_test, y_test_pred, y_test_pred_survfunc):
         ))
     return np.squeeze(scores) # squeeze superfluous dimension if single-target
 
-def __compute_metric_single_event(name, y_train, y_test, y_test_pred, y_test_pred_survfunc):
-    times = np.linspace(30, 1150, 100) # since max(y_test["time"][y_test["event"] == 1]) >= 1187
+def __compute_metric_single_event(name, y_train, y_test, y_test_pred, y_test_pred_survfunc, times=np.linspace(30, 1150, 100)): # since max(y_test["time"][y_test["event"] == 1]) >= 1187
     if name == "harrell_c":
         return concordance_index_censored(y_test["event"], y_test["time"], y_test_pred)[0]
     elif name == "unos_c":

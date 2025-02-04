@@ -52,7 +52,7 @@ def fit_models(meslvq, seslvq, X, y, save_prefix=None):
         pickle.dump(seslvq, open(fpath("STSLVQ"), 'wb'))
     return t1, t2
 
-def score_single_model(model, X_train, X_test, y_train, y_test, subset=False):
+def score_single_model(model, X_train, X_test, y_train, y_test, subset=False, times=np.linspace(30, 1150, 100)):
     """subset: boolean flag indicating whether to only compute a fast subset"""
     y_pred = model.predict(X_test)
     if subset:
@@ -65,7 +65,7 @@ def score_single_model(model, X_train, X_test, y_train, y_test, subset=False):
     results = pd.DataFrame(np.nan, index=metrics, columns=EVENT_NAMES)
     for metric in results.index:
         results.loc[metric, :] = compute_metric(
-            metric, y_train, y_test, y_pred, y_pred_survfunc
+            metric, y_train, y_test, y_pred, y_pred_survfunc, times=times
         )
     return results
 
@@ -79,6 +79,7 @@ def score_models(meslvq, seslvq, X_train, X_test, y_train, y_test, subset=False)
     return results
 
 def plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=None, save_prefix=None, save_path=PATH_FIGS, presentation_subset=False):
+    event_names = [TARGET_NAME_MAPPING[EVENT_NAMES[j]] for j in range(len(models))]
     if names is None:
         names = list(range(X_train.shape[0]))
     def savefig(name):
@@ -95,7 +96,7 @@ def plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=None, sa
     # FEATURE RELEVANCES
     plot_feature_relevances(meslvq, names=names)
     savefig("relevances_global")
-    plot_feature_relevances_local(seslvq, names=names)
+    plot_feature_relevances_local(seslvq, names=names, event_names=event_names)
     savefig("relevances_local")
 
     # KAPLAN-MEIER
@@ -174,7 +175,8 @@ def run_models_simple(refit=False):
     results.to_csv(os.path.join(PATH_FIGS, "simple_results.csv"))
 
     # Generate comparison figures
-    plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=X.columns, save_prefix="simple")
+    names = np.array([FEATURE_NAME_MAPPING[name] for name in X.columns])
+    plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=names, save_prefix="simple")
 
 def run_models_tuned(retune=False, refit=False):
     # Load the data
@@ -280,7 +282,8 @@ def run_models_tuned(retune=False, refit=False):
     results.to_csv(os.path.join(PATH_FIGS, "tuned_results_test.csv"))
 
     # Generate comparison figures
-    plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=X.columns, save_prefix="tuned")
+    names = np.array([FEATURE_NAME_MAPPING[name] for name in X.columns])
+    plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=names, save_prefix="tuned")
 
     plot_timing_results(times)
     plt.savefig(os.path.join(PATH_FIGS, "fitting_time.pdf"))
@@ -305,7 +308,8 @@ def presentation():
     fpath = lambda mname: os.path.join("models", f"tuned_{mname}.pkl")
     meslvq = pickle.load(open(fpath("MTSLVQ"), "rb"))
     seslvq = pickle.load(open(fpath("STSLVQ"), "rb"))
-    plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=X.columns, save_prefix="tuned", save_path=save_path, presentation_subset=True)
+    names = np.array([FEATURE_NAME_MAPPING[name] for name in X.columns])
+    plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=names, save_prefix="tuned", save_path=save_path, presentation_subset=True)
     # New Kaplan-Meier
     y_pred = meslvq.predict(X_train, closest=True)
     plot_kaplan_meier_global_oneplot(X_train, y_train, y_pred)

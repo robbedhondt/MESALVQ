@@ -6,7 +6,7 @@ import seaborn as sns
 from .time_to_progression import define_progression_events
 from .constants import PATH_DATA, EVENT_NAMES
 from sksurv.util import Surv
-import sys; sys.path.append("/mnt/c/Users/u0131222/PhD/Projects/survivallvq")
+import sys; sys.path.append("survivallvq")
 from SkewTransformer import SkewTransformer
 
 class Utils:
@@ -516,6 +516,13 @@ def load_xy(thresh_dropna_cols=0.5, normalize=True):
         y.append(Surv().from_arrays(cens[key], time[key]))
     y = np.vstack(y).T
     return X, y
+
+def multi_surv_from_arrays(cens, time):
+    y = []
+    for j in range(cens.shape[1]):
+        y.append(Surv().from_arrays(np.array(cens)[:,j], np.array(time)[:,j]))
+    y = np.vstack(y).T
+    return y
 
 def split_train_test(X, y):
     # Split into train-test, stratified by having any of the events at all 
