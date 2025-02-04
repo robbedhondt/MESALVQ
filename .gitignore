@@ -1,0 +1,13 @@
+__pycache__
+# Folders not to be uploaded
+data
+figures
+models
+report
+
+# Some files to keep out of the GitHub
+dev.ipynb
+matplotlibrc
+notes.md
+renew_figures.sh
+
