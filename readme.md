@@ -66,9 +66,9 @@ plot_feature_relevances_local(seslvq, names=names, event_names=event_names)
 
 # Kaplan-Meier disambiguation per event on the train set
 y_pred = mesalvq.predict(X_train, closest=True)
-plot_kaplan_meier_alt(X_train, y_train, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(9,4)))
+plot_kaplan_meier_per_cluster(X_train, y_train, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(9,4)))
 y_pred = seslvq.predict(X_train, closest=True)
-plot_kaplan_meier_alt(X_train, y_train, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(9,4)))
+plot_kaplan_meier_per_cluster(X_train, y_train, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(9,4)))
 
 # Prototype loadings
 loadings = mesalvq.w.detach().numpy()

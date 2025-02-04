@@ -18,6 +18,7 @@ from mesaLVQ.model import SurvivalLVQ, MultiEventSurvivalLVQ, LocalMultiEventSur
 from mesaLVQ.constants import EVENT_NAMES, PATH_FIGS, TARGET_NAME_MAPPING
 
 def eda_figures(subset=None, save_path=PATH_FIGS):
+    """Generate exploratory data analysis figures."""
     # Load relevant datasets
     qs = load_kfss_and_edss()
     cens, time = load_time_to_worsening()
@@ -38,6 +39,7 @@ def eda_figures(subset=None, save_path=PATH_FIGS):
         plt.close()
 
 def fit_models(meslvq, seslvq, X, y, save_prefix=None):
+    """Shorthand to fit and time the models and save to a pickle file."""
     # - Multi-event
     t1 = time.time()
     meslvq.fit(X, y)
@@ -101,16 +103,16 @@ def plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=None, sa
 
     # KAPLAN-MEIER
     # > Global
-    plot_kaplan_meier_alt(X_train, y_train, y_pred_global_train)
+    plot_kaplan_meier_per_cluster(X_train, y_train, y_pred_global_train)
     savefig("kaplan_meier_global_train")
     if not presentation_subset:
-        plot_kaplan_meier_alt(X_test, y_test, y_pred_global_test)
+        plot_kaplan_meier_per_cluster(X_test, y_test, y_pred_global_test)
         savefig("kaplan_meier_global_test")
     # > Local
-    plot_kaplan_meier_alt(X_train, y_train, y_pred_local_train)
+    plot_kaplan_meier_per_cluster(X_train, y_train, y_pred_local_train)
     savefig("kaplan_meier_local_train")
     if not presentation_subset:
-        plot_kaplan_meier_alt(X_test, y_test, y_pred_local_test)
+        plot_kaplan_meier_per_cluster(X_test, y_test, y_pred_local_test)
         savefig("kaplan_meier_local_test")
     # > Logrank comparison
     if not presentation_subset:
@@ -312,7 +314,7 @@ def presentation():
     plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=names, save_prefix="tuned", save_path=save_path, presentation_subset=True)
     # New Kaplan-Meier
     y_pred = meslvq.predict(X_train, closest=True)
-    plot_kaplan_meier_global_oneplot(X_train, y_train, y_pred)
+    plot_kaplan_meier_per_cluster_oneplot(X_train, y_train, y_pred)
     savefig("kaplan_meier_global_oneplot")
     
     # OTHER

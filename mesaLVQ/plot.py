@@ -172,20 +172,6 @@ def plot_feature_relevances_local(models, names=None, event_names=None):
     fig.supxlabel('Relevance score')
     plt.tight_layout()
 
-def plot_kaplan_meier_separate(slvq, X, y_true):
-    y_pred = slvq.predict(X, closest=True)
-
-    for i in range(slvq.n_events):
-        plt.figure(figsize=(5,5))
-        for j in range(slvq.n_prototypes):
-            iloc = (y_pred == j)
-            x, y = kaplan_meier_estimator(y_true["event"][iloc,i], y_true["time"][iloc,i])
-            plt.step(x, y, where="post", label=str(j+1))#, linestyle=linestyles[j])
-            plt.ylim(0, 1)
-        plt.legend(title="Prototype")
-        plt.xlabel("Time since study enrolment [days]")
-        plt.ylabel("Probability of remaining stable")
-
 def plot_kaplan_meier_together(slvq, X, y_true):
     y_pred = slvq.predict(X, closest=True)
     
@@ -203,24 +189,7 @@ def plot_kaplan_meier_together(slvq, X, y_true):
     plt.ylabel("Probability of remaining stable")
     plt.tight_layout()
 
-def plot_kaplan_meier_together_local(slvq, X, y_true):
-    y_pred = [model.predict(X, closest=True) for model in slvq]
-    
-    linestyles = ['dashed', 'dotted', 'dashdot', 'solid']
-    plt.figure(figsize=(5,5))
-    for j in range(slvq[0].n_prototypes):
-        for i in range(len(slvq)):
-            iloc = (y_pred[i] == j)
-            x, y = kaplan_meier_estimator(y_true["event"][iloc,i], y_true["time"][iloc,i])
-            plt.step(x, y, where="post", label=f"{j+1} (event {i+1})", linestyle=linestyles[j])
-            # plt.ylim(0, 1)
-        plt.gca().set_prop_cycle(None)
-    plt.legend(title="Prototype", loc="center left", bbox_to_anchor=(1,0.5))
-    plt.xlabel("Time since study enrolment [days]")
-    plt.ylabel("Probability of remaining stable")
-    plt.tight_layout()
-
-def plot_kaplan_meier_alt(X, y_true, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(8.5, 3.75))):
+def plot_kaplan_meier_per_cluster(X, y_true, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(8.5, 3.75))):
     # If just 1 global clustering is given, repeat it based on the number of targets
     if len(y_true.shape) != len(y_pred.shape):
         y_pred = np.array([y_pred]*y_true.shape[1]).T
@@ -243,6 +212,35 @@ def plot_kaplan_meier_alt(X, y_true, y_pred, subplots_params=dict(nrows=2, ncols
     plt.tight_layout()
     ax[3].legend(loc="upper left", bbox_to_anchor=(1.1,0.2), title="Prototype", 
         framealpha=1.0, borderaxespad=0.0, edgecolor="black", fancybox=False)
+
+def plot_kaplan_meier_per_cluster_oneplot(X, y_true, y_pred):
+    # If just 1 global clustering is given, repeat it based on the number of targets
+    if len(y_true.shape) != len(y_pred.shape):
+        y_pred = np.array([y_pred]*y_true.shape[1]).T
+    plt.figure(figsize=(6,4.5))
+    colors = ["blue", "orange", "green", "red"]
+    colors = plt.rcParams['axes.prop_cycle'].by_key()["color"][:4]
+    for j in range(y_pred.shape[1]):
+        for c in range(len(np.unique(y_pred[:,j]))):
+            iloc = (y_pred[:,j] == c)
+            if any(iloc):
+                x, y = kaplan_meier_estimator(y_true["event"][iloc,j], y_true["time"][iloc,j])
+                plt.step(x, y, where="post", label=["",c+1][j==0], 
+                    ls=LINESTYLES[c], zorder=5, color=colors[c])
+    tmax = 100*np.ceil(np.max(y_true["time"])/100) # Round to nearest 100 from below
+    plt.xticks(np.arange(0, tmax+1, 200), rotation=0)
+    plt.yticks(np.arange(0,1.1,0.1))
+    plt.grid()
+    plt.ylim([0,1])
+    plt.xlim([0,plt.xlim()[1]])
+    # fig.subplots_adjust(hspace=0.15, wspace=0.15)
+    plt.ylabel("Probability of\nremaining stable")
+    plt.xlabel("Time since study enrolment [days]")
+    plt.tight_layout()
+    plt.legend(
+        loc="center left", bbox_to_anchor=(1,0.5), title="Prototype", 
+        # framealpha=1.0, borderaxespad=0.0, edgecolor="black", fancybox=False
+    )
 
 def plot_timing_results(times):
     plt.figure(figsize=(5,5))
@@ -476,32 +474,3 @@ def plot_performance_metrics():
         plt.ylim([0,1])
         ax[i].get_legend().remove()
     fig.legend(*ax[0].get_legend_handles_labels(), loc="center", bbox_to_anchor=(0.5,0.5), title="Model", framealpha=1.0, borderaxespad=0.0, edgecolor="black", fancybox=False)
-
-def plot_kaplan_meier_global_oneplot(X, y_true, y_pred):
-    # If just 1 global clustering is given, repeat it based on the number of targets
-    if len(y_true.shape) != len(y_pred.shape):
-        y_pred = np.array([y_pred]*y_true.shape[1]).T
-    plt.figure(figsize=(6,4.5))
-    colors = ["blue", "orange", "green", "red"]
-    colors = plt.rcParams['axes.prop_cycle'].by_key()["color"][:4]
-    for j in range(y_pred.shape[1]):
-        for c in range(len(np.unique(y_pred[:,j]))):
-            iloc = (y_pred[:,j] == c)
-            if any(iloc):
-                x, y = kaplan_meier_estimator(y_true["event"][iloc,j], y_true["time"][iloc,j])
-                plt.step(x, y, where="post", label=["",c+1][j==0], 
-                    ls=LINESTYLES[c], zorder=5, color=colors[c])
-    tmax = 100*np.ceil(np.max(y_true["time"])/100) # Round to nearest 100 from below
-    plt.xticks(np.arange(0, tmax+1, 200), rotation=0)
-    plt.yticks(np.arange(0,1.1,0.1))
-    plt.grid()
-    plt.ylim([0,1])
-    plt.xlim([0,plt.xlim()[1]])
-    # fig.subplots_adjust(hspace=0.15, wspace=0.15)
-    plt.ylabel("Probability of\nremaining stable")
-    plt.xlabel("Time since study enrolment [days]")
-    plt.tight_layout()
-    plt.legend(
-        loc="center left", bbox_to_anchor=(1,0.5), title="Prototype", 
-        # framealpha=1.0, borderaxespad=0.0, edgecolor="black", fancybox=False
-    )
