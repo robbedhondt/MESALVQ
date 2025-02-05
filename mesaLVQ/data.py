@@ -528,7 +528,7 @@ def split_train_test(X, y):
     # Split into train-test, stratified by having any of the events at all 
     # (true for 82% of the patients)
     X_train, X_test, y_train, y_test = train_test_split(
-        X.values.astype(float), y, test_size=0.2, 
+        np.array(X).astype(float), y, test_size=0.2, 
         random_state=42, stratify=np.max(y["event"], axis=1)
     )
     return X_train, X_test, y_train, y_test
