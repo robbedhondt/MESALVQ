@@ -60,6 +60,8 @@ def plot_visit_dates(qs):
     ax[1].set_xlabel("Number of days after study start")
 
 def plot_kaplan_meier(cens, time, showconf=False, figsize=(5,2), ylim=[0.33,1]):
+    """this is specific to the MS application... plot_multievent_kaplan_meier is
+    more general, use that one instead."""
     # from cycler import cycler
     # custom_cycler = cycler(linestyle=['-', '--', ':', '-.']) + plt.rcParams['axes.prop_cycle']
     linestyles = ['-', '--', ':', '-.', '-', '--', ':', '-.']
@@ -81,6 +83,28 @@ def plot_kaplan_meier(cens, time, showconf=False, figsize=(5,2), ylim=[0.33,1]):
     plt.xlabel("Time since study enrolment [days]")
     plt.ylabel("Probability of\nremaining stable")
     plt.grid()
+
+def plot_multievent_kaplan_meier(y, showconf=False, figsize=(5,5), ylim=[0,1], event_names=None):
+    if event_names is None:
+        event_names = [f"event {j+1}" for j in range(y.shape[1])]
+    linestyles = ['-', '--', ':', '-.', '-', '--', ':', '-.']
+    cens = y[y.dtype.names[0]]
+    time = y[y.dtype.names[1]]
+
+    plt.figure(figsize=figsize)
+    for j in range(y.shape[1]):
+        nona = ~np.isnan(time[:,j])
+        x, y, conf = kaplan_meier_estimator(cens[nona,j], time[nona,j], conf_type="log-log")
+        plt.step(x, y, where="post", label=event_names[j], ls=linestyles[j])#, ls=(0,(1,j)))
+        if showconf:
+            plt.fill_between(x, conf[0], conf[1], alpha=0.2)
+    plt.legend(loc="center left", bbox_to_anchor=[1,0.5])
+    plt.xlim([0,np.max(time)])
+    plt.ylim(ylim)
+    plt.xlabel("Time")
+    plt.ylabel("Survival probability")
+    plt.grid()
+
 
 def plot_heatmap_logrank(cens, time):
     pvals = pd.DataFrame(index=cens.columns, columns=cens.columns, dtype=float)
@@ -147,7 +171,7 @@ def plot_feature_relevances(slvq, names=None, sort=True):
     if names is None:
         names = np.array(range(rel_mat.shape[0]))
     isort = np.argsort(np.diag(rel_mat))
-    plt.figure(figsize=(5, len(names) / 6))
+    plt.figure(figsize=(5, max(5, len(names) / 6)))
     plt.barh(names[isort], np.diag(rel_mat)[isort], fc="k")
     plt.xlabel('Relevance score')
     plt.ylabel('Feature')
@@ -158,8 +182,8 @@ def plot_feature_relevances_local(models, names=None, event_names=None):
     if names is None:
         names = np.array(range(models[0].n_features))
     if event_names is None:
-        event_names = [f"event {j+1}" for j in range(len(model))]
-    fig, ax = plt.subplots(ncols=len(models), figsize=(1.25*len(models), 6), sharey=True, sharex=True)
+        event_names = [f"event {j+1}" for j in range(len(models))]
+    fig, ax = plt.subplots(ncols=len(models), figsize=(max(10, 1.25*len(models)), 6), sharey=True, sharex=True)
     relevances = np.stack([np.diag(model.lambda_mat().detach().numpy()) for model in models], axis=1)
     isort = np.argsort(relevances.max(axis=1))
     for j,model in enumerate(models):
@@ -189,7 +213,9 @@ def plot_kaplan_meier_together(slvq, X, y_true):
     plt.ylabel("Probability of remaining stable")
     plt.tight_layout()
 
-def plot_kaplan_meier_per_cluster(X, y_true, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(8.5, 3.75))):
+def plot_kaplan_meier_per_cluster(X, y_true, y_pred, subplots_params=dict(nrows=2, ncols=4, figsize=(8.5, 3.75)), event_names=None):
+    if event_names is None:
+        event_names = [TARGET_NAME_MAPPING[name] for name in EVENT_NAMES]
     # If just 1 global clustering is given, repeat it based on the number of targets
     if len(y_true.shape) != len(y_pred.shape):
         y_pred = np.array([y_pred]*y_true.shape[1]).T
@@ -203,14 +229,15 @@ def plot_kaplan_meier_per_cluster(X, y_true, y_pred, subplots_params=dict(nrows=
                 x, y = kaplan_meier_estimator(y_true["event"][iloc,j], y_true["time"][iloc,j])
                 ax[j].step(x, y, where="post", label=c+1, ls=LINESTYLES[c], zorder=5)
         ax[j].grid()
-        ax[j].set_title(TARGET_NAME_MAPPING[EVENT_NAMES[j]])
+        ax[j].set_title(event_names[j])
     ax[0].set_ylim([0,1])
     ax[0].set_xlim([0,ax[0].get_xlim()[1]])
     # fig.subplots_adjust(hspace=0.15, wspace=0.15)
     fig.supylabel("Probability of remaining stable")
     fig.supxlabel("Time since study enrolment [days]")
     plt.tight_layout()
-    ax[3].legend(loc="upper left", bbox_to_anchor=(1.1,0.2), title="Prototype", 
+    ilegend = min(3, y_true.shape[1]-1) # small hack to make it work for less than 4 events
+    ax[ilegend].legend(loc="upper left", bbox_to_anchor=(1.1,0.2), title="Prototype", 
         framealpha=1.0, borderaxespad=0.0, edgecolor="black", fancybox=False)
 
 def plot_kaplan_meier_per_cluster_oneplot(X, y_true, y_pred):
@@ -320,8 +347,7 @@ def plot_auroc(y_train, y_test, y_pred_test_survfunc):
 
 def plot_prototypes(loadings, names, ticks_right=True, sort_by=None):
     # Organize the loadings into a dataframe
-    cols = [FEATURE_NAME_MAPPING[col] for col in names]
-    df = pd.DataFrame(loadings.T, index=cols, columns=range(1, loadings.shape[0]+1))
+    df = pd.DataFrame(loadings.T, index=names, columns=range(1, loadings.shape[0]+1))
     if sort_by is not None:
         # # Sort by raw value of that prototype
         # df = df.sort_values(by=sort_by, key=lambda t: -t.abs())
@@ -359,8 +385,7 @@ def plot_prototypes(loadings, names, ticks_right=True, sort_by=None):
 
 def plot_prototypes_transposed(loadings, names, ticks_top=True):
     # Organize the loadings into a dataframe
-    cols = [FEATURE_NAME_MAPPING[col] for col in names]
-    df = pd.DataFrame(loadings.T, index=cols, columns=range(1, loadings.shape[0]+1))
+    df = pd.DataFrame(loadings.T, index=names, columns=range(1, loadings.shape[0]+1))
     # Choose a colormap
     colors = plt.get_cmap("rocket")(np.linspace(0.1,0.9,loadings.shape[0]))
     # Plot the bars
@@ -390,37 +415,6 @@ def plot_prototypes_transposed(loadings, names, ticks_top=True):
     plt.legend(title="Prototype", loc="lower left",
             framealpha=1.0, borderaxespad=0.0, edgecolor="black", fancybox=False,
             ncols=2)
-
-def compute_cluster_validity(X, y_pred_global, y_pred_local):
-    from sklearn.impute import SimpleImputer
-    from genieclust.cluster_validity import (
-        negated_ball_hall_index,
-        calinski_harabasz_index,
-        negated_davies_bouldin_index,
-        # negated_wcss_index,
-        # wcnn_index,
-        silhouette_index,
-        # silhouette_w_index,
-        generalised_dunn_index,
-    )
-    metrics = [
-        negated_ball_hall_index,
-        calinski_harabasz_index,
-        negated_davies_bouldin_index,
-        silhouette_index,
-        # silhouette_w_index,
-        generalised_dunn_index,
-    ]
-    X_imputed = SimpleImputer().fit_transform(X)
-    scores = {}
-    remap_array = lambda arr: np.unique(arr, return_inverse=True)[1]
-    for metric in metrics:
-        local = [metric(X_imputed, remap_array(y_pred_local[:,j])) 
-                for j in range(y_pred_local.shape[1])]
-        scores[metric.__name__] = [metric(X_imputed, remap_array(y_pred_global)), np.mean(local)] + local
-    scores = pd.DataFrame(scores, index=["MTSLVQ","STSLVQ"]+[f"STSLVQ_{j}" for j in range(y_pred_local.shape[1])]).T
-    scores["global_is_better"] = scores["MTSLVQ"] > scores["STSLVQ"]
-    return scores.T#.round(3)
 
 def plot_cluster_validity():
     df = pd.read_csv("figures/tuned_cluster_validity.csv")

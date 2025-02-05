@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from .time_to_progression import define_progression_events
 from .constants import PATH_DATA, EVENT_NAMES
+from sklearn.model_selection import train_test_split
 from sksurv.util import Surv
-import sys; sys.path.append("survivallvq")
-from SkewTransformer import SkewTransformer
+from .slvq import SkewTransformer
 
 class Utils:
     @staticmethod

@@ -1,10 +1,9 @@
+import os
 import numpy as np
 import torch
 from sklearn.base import BaseEstimator
 from sksurv.util import Surv
-from sksurv.metrics import concordance_index_censored, concordance_index_ipcw, integrated_brier_score, cumulative_dynamic_auc
-import sys; sys.path.append("survivallvq")
-from Models.SurvivalLVQ import SurvivalLVQ
+from .slvq import SurvivalLVQ
 
 class MultiEventSurvivalLVQ(torch.nn.Module, BaseEstimator):
     def __init__(self, n_prototypes=2, n_omega_rows=None, batch_size=128,
@@ -163,43 +162,3 @@ class LocalMultiEventSurvivalLVQ(BaseEstimator):
     def __len__(self):
         return len(self.models)
 
-
-
-def compute_metric(name, y_train, y_test, y_test_pred, y_test_pred_survfunc, times=np.linspace(30, 1150, 100)):
-    # Make the code work also for single-event
-    y_train              = np.atleast_2d(y_train             )
-    y_test               = np.atleast_2d(y_test              )
-    y_test_pred          = np.atleast_2d(y_test_pred         )
-    if y_test_pred_survfunc is not None:
-        y_test_pred_survfunc = np.atleast_2d(y_test_pred_survfunc)
-    # Compute all the scores
-    scores = []
-    for k in range(y_test.shape[1]):
-        scores.append(__compute_metric_single_event(
-            name, y_train[:,k], y_test[:,k], y_test_pred[:,k], y_test_pred_survfunc[:,k]
-        ))
-    return np.squeeze(scores) # squeeze superfluous dimension if single-target
-
-def __compute_metric_single_event(name, y_train, y_test, y_test_pred, y_test_pred_survfunc, times=np.linspace(30, 1150, 100)): # since max(y_test["time"][y_test["event"] == 1]) >= 1187
-    if name == "harrell_c":
-        return concordance_index_censored(y_test["event"], y_test["time"], y_test_pred)[0]
-    elif name == "unos_c":
-        # tau = None
-        # if max(y_test["time"]) >= max(y_train["time"]):
-        #     tau = y_train["time"]
-        tau = max(y_train["time"])
-        return concordance_index_ipcw(y_train, y_test, y_test_pred, tau=tau)[0]
-    elif name == "integr_brier":
-        y_test_pred_survfunc = [yy(times) for yy in y_test_pred_survfunc]
-        return integrated_brier_score(y_train, y_test, y_test_pred_survfunc, times)
-    elif name == "integr_auroc":
-        # One individual has the event at the maximum censoring time, leading to
-        # a ValueError ("censoring survival function is zero at one or more time 
-        # points"). Skipping this individual in the evaluation resolves the error.
-        iloc = (y_test["time"] == max(y_test["time"])) & (y_test["event"] == 1)
-        # return cumulative_dynamic_auc(y_train, y_test[~iloc], y_test_pred[~iloc], times)[1]
-        y_test_pred_survfunc = np.array([yy(times) for yy in y_test_pred_survfunc]) 
-        y_test_pred_survfunc *= -1 # some ranking problem otherwise...
-        return cumulative_dynamic_auc(y_train, y_test[~iloc], y_test_pred_survfunc[~iloc,:], times)[1]
-    else:
-        raise ValueError(f"Unknown metric '{name}'")

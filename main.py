@@ -14,7 +14,8 @@ from sklearn.model_selection import train_test_split, ParameterGrid #, GridSearc
 
 from mesaLVQ.data import load_kfss_and_edss, load_time_to_worsening, load_xy, split_train_test
 from mesaLVQ.plot import *
-from mesaLVQ.model import SurvivalLVQ, MultiEventSurvivalLVQ, LocalMultiEventSurvivalLVQ, compute_metric
+from mesaLVQ.model import SurvivalLVQ, MultiEventSurvivalLVQ, LocalMultiEventSurvivalLVQ
+from mesaLVQ.score import compute_metric, compare_cluster_validity, compare_predictive_performance
 from mesaLVQ.constants import EVENT_NAMES, PATH_FIGS, TARGET_NAME_MAPPING
 
 def eda_figures(subset=None, save_path=PATH_FIGS):
@@ -72,6 +73,7 @@ def score_single_model(model, X_train, X_test, y_train, y_test, subset=False, ti
     return results
 
 def score_models(meslvq, seslvq, X_train, X_test, y_train, y_test, subset=False):
+    """NOTE: this is now a legacy function, use `mesaLVQ.score.compare_predictive_performance instead!"""
     results = {}
     for name, model in {"MTSLVQ":meslvq, "STSLVQ":seslvq}.items():
         results[name] = score_single_model(
@@ -81,7 +83,7 @@ def score_models(meslvq, seslvq, X_train, X_test, y_train, y_test, subset=False)
     return results
 
 def plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=None, save_prefix=None, save_path=PATH_FIGS, presentation_subset=False):
-    event_names = [TARGET_NAME_MAPPING[EVENT_NAMES[j]] for j in range(len(models))]
+    event_names = [TARGET_NAME_MAPPING[EVENT_NAMES[j]] for j in range(y_train.shape[1])]
     if names is None:
         names = list(range(X_train.shape[0]))
     def savefig(name):
@@ -148,7 +150,7 @@ def plot_models(meslvq, seslvq, X_train, X_test, y_train, y_test, names=None, sa
 
     # CLUSTER VALIDITY CRITERIA
     if not presentation_subset:
-        scores = compute_cluster_validity(X_train, y_pred_global_train, y_pred_local_train)
+        scores = compare_cluster_validity(X_train, y_pred_global_train, y_pred_local_train)
         savetab(scores, "cluster_validity")
         print(scores)
 
@@ -326,8 +328,8 @@ def presentation():
 
 if __name__ == "__main__":
     # eda_figures()
-    # run_models_simple(refit=False)
+    run_models_simple(refit=False)
     # run_models_tuned(retune=False, refit=False)
-    presentation()
+    # presentation()
 
 
