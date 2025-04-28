@@ -1,5 +1,5 @@
 # Multi-Event Survival Analysis-Informed Clustering
-This repository hosts the code used in the publication "Multi-Event Survival Analysis-Informed Clustering with MESA-LVQ: Functional System Worsening in Multiple Sclerosis".
+This repository hosts the code used in the publication "Multi-Event Survival-Informed Clustering for Time-to-Worsening in Multiple Sclerosis".
 
 # Setup
 - Environment setup: in the paper, Python 3.11 was used with the following packages (for more details on version specifics, see `requirements.txt`):
