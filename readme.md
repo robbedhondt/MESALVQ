@@ -1,5 +1,6 @@
 # Multi-Event Survival Analysis-Informed Clustering
-This repository hosts the code used in the publication "Multi-Event Survival-Informed Clustering for Time-to-Worsening in Multiple Sclerosis".
+This repository hosts the code used in the following publication:
+> D’hondt, R., de Boer, J., Vens, C., for MSOAC. (2025). Multi-Event Survival-Informed Clustering for Time-to-Worsening in Multiple Sclerosis. In: Bellazzi, R., Juarez Herrero, J.M., Sacchi, L., Zupan, B. (eds) Artificial Intelligence in Medicine. AIME 2025. Lecture Notes in Computer Science(), vol 15734. Springer, Cham. https://doi.org/10.1007/978-3-031-95838-0_8
 
 # Setup
 - Environment setup: in the paper, Python 3.11 was used with the following packages (for more details on version specifics, see `requirements.txt`):
